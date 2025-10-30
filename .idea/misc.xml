@@ -5,6 +5,11 @@
     <option name="originalFiles">
       <list>
         <option value="$PROJECT_DIR$/pom.xml" />
+        <option value="$PROJECT_DIR$/MicroserviceFront/pom.xml" />
+        <option value="$PROJECT_DIR$/MicroserviceLogin/pom.xml" />
+        <option value="$PROJECT_DIR$/MicroserviceProject/pom.xml" />
+        <option value="$PROJECT_DIR$/MicroserviceNotification/pom.xml" />
+        <option value="$PROJECT_DIR$/MicroserviceStudent/pom.xml" />
       </list>
     </option>
   </component>
