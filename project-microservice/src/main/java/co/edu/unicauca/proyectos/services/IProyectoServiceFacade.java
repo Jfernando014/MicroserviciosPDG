@@ -6,13 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface IProyectoServiceFacade {
-    ProyectoGrado crearProyecto(ProyectoGrado proyecto);
-    void evaluarProyecto(Long id, boolean aprobado, String observaciones);
-    void reintentarProyecto(Long id);
-    void subirAnteproyecto(Long idProyecto, String jefeDepartamentoEmail);
-    List<ProyectoGrado> obtenerProyectosPorEstudiante(String email);
-    List<ProyectoGrado> obtenerAnteproyectosPorJefe(String emailJefe);
-
+    
     ResponseEntity<?> subirFormatoA(
             String titulo,
             String modalidad,
@@ -22,5 +16,23 @@ public interface IProyectoServiceFacade {
             MultipartFile pdf,
             MultipartFile carta
     );
+    
+    ProyectoGrado crearProyecto(ProyectoGrado proyecto);
+    
+    void evaluarProyecto(Long id, boolean aprobado, String observaciones);
+    
+    void reintentarProyecto(Long id);
+
+    // Método actualizado: ahora recibe el archivo PDF del anteproyecto
+    ResponseEntity<?> subirAnteproyecto(Long idProyecto, String jefeDepartamentoEmail, MultipartFile anteproyectoPdf);
+
+    List<ProyectoGrado> obtenerProyectosPorEstudiante(String email);
+
+    List<ProyectoGrado> obtenerAnteproyectosPorJefe(String emailJefe);
+
+    // Nuevos métodos para los endpoints faltantes
+    ProyectoGrado obtenerProyectoPorId(Long id);
+
+    List<ProyectoGrado> obtenerTodosProyectos();
 }
 

@@ -67,7 +67,6 @@ public class ProyectoServiceFacade implements IProyectoServiceFacade {
             return ResponseEntity.badRequest().body(Map.of("error", "Se requiere carta de aceptación"));
         }
 
-        // Cambiar "formatoA" por "FORMATO_A" y "cartas" por "CARTA_EMPRESA"
         String formatoTok = documentosClient.subir(0L, "FORMATO_A", pdf);
         String cartaTok = (carta != null && !carta.isEmpty()) ? 
                           documentosClient.subir(0L, "CARTA_EMPRESA", carta) : null;
@@ -150,20 +149,62 @@ public class ProyectoServiceFacade implements IProyectoServiceFacade {
     }
 
     @Override
-    public void subirAnteproyecto(Long idProyecto, String jefeDepartamentoEmail) {
-        ProyectoGrado p = proyectoService.obtenerPorId(idProyecto);
-        if (!"FORMATO_A_APROBADO".equals(p.getEstadoActual())) {
-            throw new RuntimeException("Solo se puede subir anteproyecto si el Formato A está aprobado.");
+    public ResponseEntity<?> subirAnteproyecto(Long idProyecto, String jefeDepartamentoEmail, MultipartFile anteproyectoPdf) {
+        try {
+            // 1. Validar que el proyecto existe
+            ProyectoGrado p = proyectoService.obtenerPorId(idProyecto);
+            if (p == null) {
+                return ResponseEntity.status(404).body(Map.of("error", "Proyecto no encontrado"));
+            }
+        
+            // 2. Validar que el Formato A está aprobado
+            if (!"FORMATO_A_APROBADO".equals(p.getEstadoActual())) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "error", "Solo se puede subir anteproyecto si el Formato A está aprobado.",
+                    "estadoActual", p.getEstadoActual()
+                ));
+            }
+        
+            // 3. Validar que el archivo PDF no esté vacío
+            if (anteproyectoPdf == null || anteproyectoPdf.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "El archivo PDF del anteproyecto es obligatorio"));
+            }
+        
+            // 4. Validar que el jefe de departamento existe
+            validarUsuario(jefeDepartamentoEmail, "JEFE_DEPARTAMENTO");
+        
+            // 5. Subir el documento al microservicio de documentos
+            String anteproyectoToken = documentosClient.subir(idProyecto, "ANTEPROYECTO", anteproyectoPdf);
+        
+            // 6. Guardar el token en el proyecto
+            p.setAnteproyectoToken(anteproyectoToken);
+            proyectoService.guardar(p);
+        
+            // 7. Enviar evento de notificación al jefe de departamento
+            AnteproyectoSubidoEvent ev = new AnteproyectoSubidoEvent();
+            ev.setIdProyecto(p.getId());
+            ev.setTitulo(p.getTitulo());
+            ev.setJefeDepartamentoEmail(jefeDepartamentoEmail);
+            ev.setEstudianteEmail(p.getEstudiante1Email());
+            ev.setTutor1Email(p.getDirectorEmail());
+            if (p.getCodirectorEmail() != null && !p.getCodirectorEmail().isEmpty()) {
+                ev.setTutor2Email(p.getCodirectorEmail());
+            }
+            rabbitTemplate.convertAndSend(EXCHANGE, RK_ANTEPROYECTO_SUBIDO, ev);
+        
+            // 8. Retornar respuesta exitosa
+            Map<String, Object> respuesta = new java.util.HashMap<>();
+            respuesta.put("idProyecto", p.getId());
+            respuesta.put("anteproyectoToken", anteproyectoToken);
+            respuesta.put("mensaje", "Anteproyecto subido exitosamente. El jefe de departamento ha sido notificado.");
+        
+            return ResponseEntity.ok(respuesta);
+        
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", "Error al subir anteproyecto: " + e.getMessage()));
         }
-        AnteproyectoSubidoEvent ev = new AnteproyectoSubidoEvent();
-        ev.setIdProyecto(p.getId());
-        ev.setTitulo(p.getTitulo());
-        ev.setJefeDepartamentoEmail(jefeDepartamentoEmail);
-        ev.setEstudianteEmail(p.getEstudiante1Email());
-        ev.setTutor1Email(p.getDirectorEmail());
-        if (p.getCodirectorEmail()!=null && !p.getCodirectorEmail().isEmpty())
-            ev.setTutor2Email(p.getCodirectorEmail());
-        rabbitTemplate.convertAndSend(EXCHANGE, RK_ANTEPROYECTO_SUBIDO, ev);
     }
 
     @Override
@@ -173,6 +214,16 @@ public class ProyectoServiceFacade implements IProyectoServiceFacade {
 
     @Override
     public List<ProyectoGrado> obtenerAnteproyectosPorJefe(String emailJefe) {
+        return proyectoService.obtenerTodos();
+    }
+    
+    @Override
+    public ProyectoGrado obtenerProyectoPorId(Long id) {
+        return proyectoService.obtenerPorId(id);
+    }
+    
+    @Override
+    public List<ProyectoGrado> obtenerTodosProyectos() {
         return proyectoService.obtenerTodos();
     }
 }

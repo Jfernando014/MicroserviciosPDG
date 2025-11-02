@@ -26,6 +26,7 @@ public class ProyectoGrado {
     private String estadoActual; // Persistente
     private String formatoAToken;
     private String cartaToken;
+    private String anteproyectoToken; // AGREGAR ESTE CAMPO
 
 
     @Transient
@@ -45,6 +46,15 @@ public class ProyectoGrado {
     public void evaluar(boolean aprobado, String observaciones) {
         if (estado == null) throw new IllegalStateException("Estado no inicializado.");
         estado.evaluar(this, aprobado, observaciones);
+    }
+
+    // AGREGAR GETTER Y SETTER:
+    public String getAnteproyectoToken() {
+        return anteproyectoToken;
+    }
+
+    public void setAnteproyectoToken(String anteproyectoToken) {
+        this.anteproyectoToken = anteproyectoToken;
     }
 
     public void reintentar() {
