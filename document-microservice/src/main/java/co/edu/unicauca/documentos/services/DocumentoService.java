@@ -23,6 +23,7 @@ public class DocumentoService implements IDocumentoService {
     @Autowired
     private DocumentoRepository documentoRepository;
 
+    // Factory (Singleton según tu proyecto)
     private final DocumentoFactory documentoFactory = DocumentoFactory.getInstance();
 
     @Value("${app.document.storage-dir}")
@@ -34,42 +35,53 @@ public class DocumentoService implements IDocumentoService {
         String tipoDocumento = request.getTipoDocumento();
         Long idProyecto = request.getIdProyecto();
 
-        if (archivo.isEmpty()) {
+        if (archivo == null || archivo.isEmpty()) {
             throw new IllegalArgumentException("El archivo no puede estar vacío.");
         }
 
-        // --- PATRÓN FACTORY METHOD ---
+        // --- FACTORY METHOD (validador) ---
         DocumentoValidator validator = documentoFactory.crearValidator(tipoDocumento);
         validator.validar(archivo);
-        // ------------------------------
+        // ----------------------------------
 
+        // Carpeta de storage
         Path dirPath = Paths.get(storageDir);
         if (!Files.exists(dirPath)) {
             Files.createDirectories(dirPath);
         }
 
+        // Nombre original y extensión (con punto, como lo venías usando)
         String originalFilename = archivo.getOriginalFilename();
         String extension = "";
         if (originalFilename != null && originalFilename.lastIndexOf(".") > 0) {
-            extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            extension = originalFilename.substring(originalFilename.lastIndexOf(".")); // e.g. ".pdf"
         }
+
+        // Nombre físico único para disco
         String nombreUnico = UUID.randomUUID() + extension;
         Path filePath = dirPath.resolve(nombreUnico);
 
+        // Guardar en disco
         try {
             archivo.transferTo(filePath);
         } catch (IOException e) {
             throw new RuntimeException("Error al guardar el archivo en disco.", e);
         }
 
-        Documento documento = new Documento();
-        documento.setIdProyecto(idProyecto);
-        documento.setTipoDocumento(tipoDocumento);
-        documento.setNombreArchivo(originalFilename != null ? originalFilename : "archivo" + extension);
-        documento.setExtension(extension);
-        documento.setTamaño(archivo.getSize());
-        documento.setRutaArchivo(filePath.toString());
-        documento.setEstado("PENDIENTE");
+        // --- FACTORY METHOD (entidad Documento) ---
+        // Si no hay nombre original, usamos un fallback manteniendo la extensión calculada
+        String nombreParaEntidad = (originalFilename != null && !originalFilename.isBlank())
+                ? originalFilename
+                : ("archivo" + extension);
+
+        Documento documento = documentoFactory.nuevo(
+                idProyecto,
+                tipoDocumento,
+                nombreParaEntidad,
+                archivo.getSize(),
+                filePath
+        );
+        // ------------------------------------------
 
         return documentoRepository.save(documento);
     }
