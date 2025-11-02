@@ -1,23 +1,15 @@
 package co.edu.unicauca.proyectos.models.estados;
 
-import org.springframework.stereotype.Component;
-import co.edu.unicauca.proyectos.models.EstadoProyecto;
-import co.edu.unicauca.proyectos.models.ProyectoGrado;
+import co.edu.unicauca.proyectos.models.*;
 
-@Component
 public class RechazadoDefinitivoState implements EstadoProyecto {
-    @Override
-    public void evaluar(ProyectoGrado proyecto, boolean aprobado, String observaciones) {
-        throw new IllegalStateException("El proyecto fue rechazado definitivamente.");
+    @Override public void evaluar(ProyectoGrado p, boolean a, String o) {
+        throw new IllegalStateException("Rechazado definitivo.");
     }
-
-    @Override
-    public void reintentar(ProyectoGrado proyecto) {
-        throw new IllegalStateException("No se pueden hacer más reintentos.");
+    @Override public void reintentar(ProyectoGrado p) {
+        throw new IllegalStateException("No hay más reintentos. Rechazo definitivo.");
     }
-
-    @Override
-    public String getNombreEstado() {
+    @Override public String getNombreEstado() {
         return "RECHAZADO_DEFINITIVO";
     }
 }

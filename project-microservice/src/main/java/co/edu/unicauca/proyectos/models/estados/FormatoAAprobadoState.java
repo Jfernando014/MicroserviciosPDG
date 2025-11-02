@@ -1,23 +1,15 @@
 package co.edu.unicauca.proyectos.models.estados;
 
-import org.springframework.stereotype.Component;
-import co.edu.unicauca.proyectos.models.EstadoProyecto;
-import co.edu.unicauca.proyectos.models.ProyectoGrado;
+import co.edu.unicauca.proyectos.models.*;
 
-@Component
 public class FormatoAAprobadoState implements EstadoProyecto {
-    @Override
-    public void evaluar(ProyectoGrado proyecto, boolean aprobado, String observaciones) {
-        throw new IllegalStateException("El proyecto ya fue aprobado.");
+    @Override public void evaluar(ProyectoGrado p, boolean a, String o) {
+        throw new IllegalStateException("Formato A ya aprobado.");
     }
-
-    @Override
-    public void reintentar(ProyectoGrado proyecto) {
-        throw new IllegalStateException("No se puede reintentar un proyecto aprobado.");
+    @Override public void reintentar(ProyectoGrado p) {
+        throw new IllegalStateException("Proyecto aprobado. No aplica reintento.");
     }
-
-    @Override
-    public String getNombreEstado() {
+    @Override public String getNombreEstado() {
         return "FORMATO_A_APROBADO";
     }
 }

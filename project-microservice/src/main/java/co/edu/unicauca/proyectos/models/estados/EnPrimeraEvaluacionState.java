@@ -1,29 +1,23 @@
 package co.edu.unicauca.proyectos.models.estados;
 
-import co.edu.unicauca.proyectos.models.ProyectoGrado;
-import co.edu.unicauca.proyectos.models.EstadoProyecto;
-import org.springframework.stereotype.Component;
+import co.edu.unicauca.proyectos.models.*;
 
-
-@Component
 public class EnPrimeraEvaluacionState implements EstadoProyecto {
     @Override
-    public void evaluar(ProyectoGrado proyecto, boolean aprobado, String observaciones) {
-        proyecto.setObservacionesEvaluacion(observaciones);
+    public void evaluar(ProyectoGrado p, boolean aprobado, String obs) {
+        p.setObservacionesEvaluacion(obs);
         if (aprobado) {
-            proyecto.setEstado(new FormatoAAprobadoState());
+            p.setEstado(new FormatoAAprobadoState());
         } else {
-            proyecto.setEstado(new FormatoARechazadoState());
+            p.incrementarIntentoORechazarDefinitivo();     // intentos=1
+            if (!"RECHAZADO_DEFINITIVO".equals(p.getEstadoActual()))
+                p.setEstado(new EnSegundaEvaluacionState());
         }
     }
-
-    @Override
-    public void reintentar(ProyectoGrado proyecto) {
-        throw new IllegalStateException("No se puede reintentar en primera evaluación.");
+    @Override public void reintentar(ProyectoGrado p) {
+        throw new IllegalStateException("No aplica reintento en primera evaluación.");
     }
-
-    @Override
-    public String getNombreEstado() {
+    @Override public String getNombreEstado() {
         return "EN_PRIMERA_EVALUACION_FORMATO_A";
     }
 }

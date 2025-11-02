@@ -5,10 +5,12 @@ import co.edu.unicauca.proyectos.services.clients.UsuariosClient;
 import co.edu.unicauca.proyectos.services.clients.DocumentosClient;
 import co.edu.unicauca.proyectos.models.ProyectoGrado;
 import co.edu.unicauca.proyectos.models.estados.EnPrimeraEvaluacionState;
-import co.edu.unicauca.proyectos.dto.*; // FormatoASubidoEvent, AnteproyectoSubidoEvent
+import co.edu.unicauca.proyectos.dto.FormatoASubidoEvent;
+import co.edu.unicauca.proyectos.dto.AnteproyectoSubidoEvent;
 import co.edu.unicauca.proyectos.services.evaluacion.EvaluadorAprobacion;
 import co.edu.unicauca.proyectos.services.evaluacion.EvaluadorRechazo;
 
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
@@ -16,11 +18,12 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 @Service
 public class ProyectoServiceFacade implements IProyectoServiceFacade {
 
-    // Constantes de mensajería
+    // Mensajería
     private static final String EXCHANGE = "notificaciones.exchange";
     private static final String RK_FORMATO_A_SUBIDO = "formatoA.subido";
     private static final String RK_ANTEPROYECTO_SUBIDO = "anteproyecto.subido";
@@ -28,7 +31,6 @@ public class ProyectoServiceFacade implements IProyectoServiceFacade {
     // Dependencias
     private final ProyectoRepository proyectoRepository;
     private final IProyectoService proyectoService;
-    private final EnPrimeraEvaluacionState enPrimeraEvaluacionState;
     private final EvaluadorAprobacion evaluadorAprobacion;
     private final EvaluadorRechazo evaluadorRechazo;
     private final UsuariosClient userClient;
@@ -37,7 +39,6 @@ public class ProyectoServiceFacade implements IProyectoServiceFacade {
 
     public ProyectoServiceFacade(ProyectoRepository proyectoRepository,
                                  IProyectoService proyectoService,
-                                 EnPrimeraEvaluacionState enPrimeraEvaluacionState,
                                  EvaluadorAprobacion evaluadorAprobacion,
                                  EvaluadorRechazo evaluadorRechazo,
                                  UsuariosClient userClient,
@@ -45,7 +46,6 @@ public class ProyectoServiceFacade implements IProyectoServiceFacade {
                                  RabbitTemplate rabbitTemplate) {
         this.proyectoRepository = proyectoRepository;
         this.proyectoService = proyectoService;
-        this.enPrimeraEvaluacionState = enPrimeraEvaluacionState;
         this.evaluadorAprobacion = evaluadorAprobacion;
         this.evaluadorRechazo = evaluadorRechazo;
         this.userClient = userClient;
@@ -68,8 +68,8 @@ public class ProyectoServiceFacade implements IProyectoServiceFacade {
         }
 
         String formatoTok = documentosClient.subir(0L, "FORMATO_A", pdf);
-        String cartaTok = (carta != null && !carta.isEmpty()) ? 
-                          documentosClient.subir(0L, "CARTA_EMPRESA", carta) : null;
+        String cartaTok = (carta != null && !carta.isEmpty())
+                ? documentosClient.subir(0L, "CARTA_EMPRESA", carta) : null;
 
         ProyectoGrado p = new ProyectoGrado();
         p.setTitulo(titulo);
@@ -82,20 +82,17 @@ public class ProyectoServiceFacade implements IProyectoServiceFacade {
 
         p = proyectoRepository.save(p);
 
-        // Evento a notificaciones
+        // evento
         FormatoASubidoEvent ev = new FormatoASubidoEvent();
         ev.setIdProyecto(p.getId());
         ev.setTitulo(p.getTitulo());
         ev.setCoordinadorEmail("coordinador.sistemas@unicauca.edu.co");
         rabbitTemplate.convertAndSend(EXCHANGE, RK_FORMATO_A_SUBIDO, ev);
 
-        Map<String, Object> respuesta = new java.util.HashMap<>();
+        Map<String, Object> respuesta = new HashMap<>();
         respuesta.put("idProyecto", p.getId());
         respuesta.put("formatoAToken", formatoTok);
-        if (cartaTok != null) {
-            respuesta.put("cartaToken", cartaTok);
-        }
-        
+        if (cartaTok != null) respuesta.put("cartaToken", cartaTok);
         return ResponseEntity.ok(respuesta);
     }
 
@@ -116,7 +113,8 @@ public class ProyectoServiceFacade implements IProyectoServiceFacade {
         if (proyecto.getEstudiante2Email()!=null && !proyecto.getEstudiante2Email().isEmpty())
             validarUsuario(proyecto.getEstudiante2Email(), "ESTUDIANTE");
 
-        proyecto.setEstado(enPrimeraEvaluacionState);
+        // estado inicial como POJO, no bean
+        proyecto.setEstado(new EnPrimeraEvaluacionState());
         ProyectoGrado guardado = proyectoService.crear(proyecto);
 
         FormatoASubidoEvent ev = new FormatoASubidoEvent();
@@ -140,7 +138,7 @@ public class ProyectoServiceFacade implements IProyectoServiceFacade {
         p.reintentar();
         proyectoService.guardar(p);
 
-        // re-notificar coordinador
+        // re-notificar
         FormatoASubidoEvent ev = new FormatoASubidoEvent();
         ev.setIdProyecto(p.getId());
         ev.setTitulo(p.getTitulo());
@@ -151,36 +149,27 @@ public class ProyectoServiceFacade implements IProyectoServiceFacade {
     @Override
     public ResponseEntity<?> subirAnteproyecto(Long idProyecto, String jefeDepartamentoEmail, MultipartFile anteproyectoPdf) {
         try {
-            // 1. Validar que el proyecto existe
             ProyectoGrado p = proyectoService.obtenerPorId(idProyecto);
-            if (p == null) {
-                return ResponseEntity.status(404).body(Map.of("error", "Proyecto no encontrado"));
-            }
-        
-            // 2. Validar que el Formato A está aprobado
+            if (p == null) return ResponseEntity.status(404).body(Map.of("error", "Proyecto no encontrado"));
+
             if (!"FORMATO_A_APROBADO".equals(p.getEstadoActual())) {
                 return ResponseEntity.badRequest().body(Map.of(
-                    "error", "Solo se puede subir anteproyecto si el Formato A está aprobado.",
-                    "estadoActual", p.getEstadoActual()
+                        "error", "Solo se puede subir anteproyecto si el Formato A está aprobado.",
+                        "estadoActual", p.getEstadoActual()
                 ));
             }
-        
-            // 3. Validar que el archivo PDF no esté vacío
+
             if (anteproyectoPdf == null || anteproyectoPdf.isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of("error", "El archivo PDF del anteproyecto es obligatorio"));
+                return ResponseEntity.badRequest().body(Map.of("error", "El PDF del anteproyecto es obligatorio"));
             }
-        
-            // 4. Validar que el jefe de departamento existe
+
             validarUsuario(jefeDepartamentoEmail, "JEFE_DEPARTAMENTO");
-        
-            // 5. Subir el documento al microservicio de documentos
+
             String anteproyectoToken = documentosClient.subir(idProyecto, "ANTEPROYECTO", anteproyectoPdf);
-        
-            // 6. Guardar el token en el proyecto
+
             p.setAnteproyectoToken(anteproyectoToken);
             proyectoService.guardar(p);
-        
-            // 7. Enviar evento de notificación al jefe de departamento
+
             AnteproyectoSubidoEvent ev = new AnteproyectoSubidoEvent();
             ev.setIdProyecto(p.getId());
             ev.setTitulo(p.getTitulo());
@@ -191,15 +180,13 @@ public class ProyectoServiceFacade implements IProyectoServiceFacade {
                 ev.setTutor2Email(p.getCodirectorEmail());
             }
             rabbitTemplate.convertAndSend(EXCHANGE, RK_ANTEPROYECTO_SUBIDO, ev);
-        
-            // 8. Retornar respuesta exitosa
-            Map<String, Object> respuesta = new java.util.HashMap<>();
+
+            Map<String, Object> respuesta = new HashMap<>();
             respuesta.put("idProyecto", p.getId());
             respuesta.put("anteproyectoToken", anteproyectoToken);
-            respuesta.put("mensaje", "Anteproyecto subido exitosamente. El jefe de departamento ha sido notificado.");
-        
+            respuesta.put("mensaje", "Anteproyecto subido.");
             return ResponseEntity.ok(respuesta);
-        
+
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
@@ -214,16 +201,29 @@ public class ProyectoServiceFacade implements IProyectoServiceFacade {
 
     @Override
     public List<ProyectoGrado> obtenerAnteproyectosPorJefe(String emailJefe) {
-        return proyectoService.obtenerTodos();
+        return proyectoService.obtenerTodos(); // filtra luego si agregas campo responsable
     }
-    
+
     @Override
     public ProyectoGrado obtenerProyectoPorId(Long id) {
         return proyectoService.obtenerPorId(id);
     }
-    
+
     @Override
     public List<ProyectoGrado> obtenerTodosProyectos() {
         return proyectoService.obtenerTodos();
+    }
+
+    // Soporte directo a evaluaciones de estado interno
+    @Transactional
+    public ProyectoGrado evaluarFormatoA(Long idProyecto, boolean aprobado, String observaciones){
+        var p = proyectoRepository.findById(idProyecto)
+                .orElseThrow(() -> new IllegalArgumentException("Proyecto no encontrado"));
+        p.evaluar(aprobado, observaciones);
+        return proyectoRepository.save(p);
+    }
+
+    public ProyectoGrado buscarProyecto(Long id){
+        return proyectoRepository.findById(id).orElseThrow();
     }
 }
