@@ -18,13 +18,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.List;
 
-
-/**
- * Controlador REST para gestionar proyectos de grado.
- * Permite crear nuevos proyectos, evaluarlos y consultar el estado de los proyectos de un estudiante.
- */
 @RestController
-@RequestMapping("/api/proyectos")
+@RequestMapping("/api/v1/proyectos") // <- versionado requerido
 @Tag(name = "Gestión de Proyectos de Grado", description = "API para crear, evaluar y consultar proyectos de grado")
 public class ProyectoController {
 
@@ -57,60 +52,7 @@ public class ProyectoController {
                                             """
                             )
                     )
-            ),
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "Proyecto creado exitosamente",
-                            content = @Content(
-                                    mediaType = "application/json",
-                                    schema = @Schema(implementation = ProyectoGrado.class),
-                                    examples = @ExampleObject(
-                                            name = "Respuesta exitosa",
-                                            value = """
-                                                    {
-                                                      "id": 1,
-                                                      "titulo": "Sistema de Gestión de Bibliotecas",
-                                                      "modalidad": "INVESTIGACION",
-                                                      "directorEmail": "juan.perez@unicauca.edu.co",
-                                                      "codirectorEmail": "coordinador.sistemas@unicauca.edu.co",
-                                                      "estudiante1Email": "ana.gomez@unicauca.edu.co",
-                                                      "estudiante2Email": "carlos.martinez@unicauca.edu.co",
-                                                      "objetivoGeneral": "Desarrollar un sistema...",
-                                                      "objetivosEspecificos": "1. Diseñar... 2. Implementar...",
-                                                      "estadoActual": "EN_PRIMERA_EVALUACION_FORMATO_A"
-                                                    }
-                                                    """
-                                    )
-                            )
-                    ),
-                    @ApiResponse(
-                            responseCode = "400",
-                            description = "Solicitud inválida (faltan campos obligatorios)",
-                            content = @Content(
-                                    mediaType = "application/json",
-                                    examples = @ExampleObject(
-                                            name = "Error de validación",
-                                            value = """
-                                                    {"error": "Campos obligatorios faltantes"}
-                                                    """
-                                    )
-                            )
-                    ),
-                    @ApiResponse(
-                            responseCode = "500",
-                            description = "Error interno del servidor",
-                            content = @Content(
-                                    mediaType = "application/json",
-                                    examples = @ExampleObject(
-                                            name = "Error interno",
-                                            value = """
-                                                    {"error": "Error interno"}
-                                                    """
-                                    )
-                            )
-                    )
-            }
+            )
     )
     @PostMapping
     public ResponseEntity<?> crearProyecto(@RequestBody ProyectoRequest request) {
@@ -149,62 +91,21 @@ public class ProyectoController {
         return facade.subirFormatoA(titulo, modalidad, directorEmail, codirectorEmail, estudiante1Email, pdf, carta);
     }
 
-
     @Operation(
             summary = "Evaluar un proyecto de grado",
-            description = "Cambia el estado de un proyecto de grado a aprobado o rechazado y envía una notificación a los implicados.",
-            parameters = {
-                    @io.swagger.v3.oas.annotations.Parameter(
-                            name = "id",
-                            description = "ID del proyecto a evaluar",
-                            required = true,
-                            example = "1"
-                    ),
-                    @io.swagger.v3.oas.annotations.Parameter(
-                            name = "aprobado",
-                            description = "Indica si el proyecto es aprobado (true) o rechazado (false)",
-                            required = true,
-                            example = "true"
-                    ),
-                    @io.swagger.v3.oas.annotations.Parameter(
-                            name = "observaciones",
-                            description = "Observaciones del evaluador",
-                            required = true,
-                            example = "El proyecto cumple con todos los requisitos."
-                    )
-            },
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "Proyecto evaluado exitosamente",
-                            content = @Content(
-                                    mediaType = "application/json",
-                                    examples = @ExampleObject(
-                                            name = "Evaluación exitosa",
-                                            value = """
-                                                    {"mensaje": "Proyecto evaluado correctamente"}
-                                                    """
-                                    )
-                            )
-                    ),
-                    @ApiResponse(
-                            responseCode = "404",
-                            description = "Proyecto no encontrado",
-                            content = @Content(
-                                    mediaType = "application/json",
-                                    examples = @ExampleObject(
-                                            name = "No encontrado",
-                                            value = """
-                                                    {"error": "Proyecto no encontrado con ID: 999"}
-                                                    """
-                                    )
-                            )
-                    )
-            }
+            description = "Cambia el estado de un proyecto de grado a aprobado o rechazado y envía una notificación a los implicados."
     )
     @PostMapping("/{id}/evaluar")
-    public ResponseEntity<?> evaluarProyecto(@PathVariable Long id, @RequestParam boolean aprobado, @RequestParam String observaciones) {
+    public ResponseEntity<?> evaluarProyecto(
+            @PathVariable Long id,
+            @RequestParam boolean aprobado,
+            @RequestParam String observaciones,
+            @RequestHeader(name = "X-Role", required = true) String role // <- control mínimo de actor
+    ) {
         try {
+            if (!"COORDINADOR".equalsIgnoreCase(role)) {
+                return ResponseEntity.status(403).body(java.util.Map.of("error", "Solo COORDINADOR puede evaluar"));
+            }
             facade.evaluarProyecto(id, aprobado, observaciones);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
@@ -215,53 +116,7 @@ public class ProyectoController {
     @Operation(
             summary = "Subir anteproyecto",
             description = "Permite al docente subir el archivo PDF del anteproyecto una vez el Formato A ha sido aprobado. " +
-                    "Envía notificación al jefe de departamento para asignar evaluadores.",
-            parameters = {
-                    @io.swagger.v3.oas.annotations.Parameter(
-                            name = "idProyecto",
-                            description = "ID del proyecto de grado",
-                            required = true,
-                            example = "1"
-                    ),
-                    @io.swagger.v3.oas.annotations.Parameter(
-                            name = "jefeDepartamentoEmail",
-                            description = "Correo del jefe de departamento que recibirá la notificación",
-                            required = true,
-                            example = "jefe.sistemas@unicauca.edu.co"
-                    )
-            },
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "Anteproyecto subido exitosamente",
-                            content = @Content(
-                                    mediaType = "application/json",
-                                    examples = @ExampleObject(
-                                            name = "Respuesta exitosa",
-                                            value = """
-                                                    {
-                                                      "mensaje": "Anteproyecto subido correctamente",
-                                                      "idProyecto": 1,
-                                                      "anteproyectoToken": "12345"
-                                                    }
-                                                    """
-                                    )
-                            )
-                    ),
-                    @ApiResponse(
-                            responseCode = "400",
-                            description = "El Formato A no está aprobado o faltan datos",
-                            content = @Content(
-                                    mediaType = "application/json",
-                                    examples = @ExampleObject(
-                                            name = "Error de validación",
-                                            value = """
-                                                    {"error": "Solo se puede subir anteproyecto si el Formato A está aprobado."}
-                                                    """
-                                    )
-                            )
-                    )
-            }
+                    "Envía notificación al jefe de departamento para asignar evaluadores."
     )
     @PostMapping(value = "/{idProyecto}/anteproyecto", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> subirAnteproyecto(
@@ -269,69 +124,12 @@ public class ProyectoController {
             @RequestParam String jefeDepartamentoEmail,
             @RequestPart("pdf") MultipartFile anteproyectoPdf
     ) {
-        try {
-            facade.subirAnteproyecto(idProyecto, jefeDepartamentoEmail, anteproyectoPdf);
-
-            java.util.Map<String, Object> respuesta = new java.util.HashMap<>();
-            respuesta.put("mensaje", "Anteproyecto subido correctamente");
-            respuesta.put("idProyecto", idProyecto);
-
-            return ResponseEntity.ok(respuesta);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(java.util.Map.of("error", e.getMessage()));
-        }
+        return facade.subirAnteproyecto(idProyecto, jefeDepartamentoEmail, anteproyectoPdf); // <- delega al façade
     }
 
     @Operation(
             summary = "Obtener proyectos por estudiante",
-            description = "Recupera todos los proyectos asociados a un estudiante específico.",
-            parameters = {
-                    @io.swagger.v3.oas.annotations.Parameter(
-                            name = "email",
-                            description = "Correo del estudiante",
-                            required = true,
-                            example = "ana.gomez@unicauca.edu.co"
-                    )
-            },
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "Lista de proyectos encontrada",
-                            content = @Content(
-                                    mediaType = "application/json",
-                                    schema = @Schema(implementation = ProyectoGrado.class),
-                                    examples = @ExampleObject(
-                                            name = "Lista de proyectos",
-                                            value = """
-                                                    [
-                                                      {
-                                                        "id": 1,
-                                                        "titulo": "Sistema de Gestión de Bibliotecas",
-                                                        "modalidad": "INVESTIGACION",
-                                                        "directorEmail": "juan.perez@unicauca.edu.co",
-                                                        "estudiante1Email": "ana.gomez@unicauca.edu.co",
-                                                        "estadoActual": "EN_PRIMERA_EVALUACION_FORMATO_A"
-                                                      }
-                                                    ]
-                                                    """
-                                    )
-                            )
-                    ),
-                    @ApiResponse(
-                            responseCode = "404",
-                            description = "Estudiante no encontrado",
-                            content = @Content(
-                                    mediaType = "application/json",
-                                    examples = @ExampleObject(
-                                            name = "No encontrado",
-                                            value = """
-                                                    {"error": "Estudiante no encontrado"}
-                                                    """
-                                    )
-                            )
-                    )
-            }
+            description = "Recupera todos los proyectos asociados a un estudiante específico."
     )
     @GetMapping("/estudiante/{email}")
     public ResponseEntity<?> obtenerPorEstudiante(@PathVariable String email) {
@@ -345,25 +143,7 @@ public class ProyectoController {
 
     @Operation(
             summary = "Obtener anteproyectos para evaluación (Jefe de Departamento)",
-            description = "Recupera todos los proyectos que tienen anteproyecto subido y están pendientes de asignación de evaluadores.",
-            parameters = {
-                    @io.swagger.v3.oas.annotations.Parameter(
-                            name = "emailJefe",
-                            description = "Correo del jefe de departamento",
-                            required = true,
-                            example = "jefe.sistemas@unicauca.edu.co"
-                    )
-            },
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "Lista de proyectos con anteproyecto",
-                            content = @Content(
-                                    mediaType = "application/json",
-                                    schema = @Schema(implementation = ProyectoGrado.class)
-                            )
-                    )
-            }
+            description = "Recupera todos los proyectos que tienen anteproyecto subido y están pendientes de asignación de evaluadores."
     )
     @GetMapping("/anteproyectos/jefe/{emailJefe}")
     public ResponseEntity<?> obtenerAnteproyectosPorJefe(@PathVariable String emailJefe) {
@@ -378,20 +158,7 @@ public class ProyectoController {
 
     @Operation(
             summary = "Reintentar un proyecto de grado",
-            description = "Permite subir una nueva versión del Formato A tras un rechazo.",
-            parameters = {
-                    @io.swagger.v3.oas.annotations.Parameter(
-                            name = "id",
-                            description = "ID del proyecto a reintentar",
-                            required = true,
-                            example = "1"
-                    )
-            },
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Reintento procesado exitosamente"),
-                    @ApiResponse(responseCode = "400", description = "No se puede reintentar (ej: ya aprobado o 3 intentos)"),
-                    @ApiResponse(responseCode = "404", description = "Proyecto no encontrado")
-            }
+            description = "Permite subir una nueva versión del Formato A tras un rechazo."
     )
     @PostMapping("/{id}/reintentar")
     public ResponseEntity<?> reintentarProyecto(@PathVariable Long id) {
@@ -404,44 +171,34 @@ public class ProyectoController {
     }
 
     @Operation(
-        summary = "Obtener proyecto por ID",
-        description = "Recupera los detalles completos de un proyecto específico por su identificador.",
-        parameters = {
-            @io.swagger.v3.oas.annotations.Parameter(
-                name = "id",
-                description = "ID del proyecto",
-                required = true,
-                example = "1"
-            )
-        },
-        responses = {
-            @ApiResponse(
-                responseCode = "200",
-                description = "Proyecto encontrado",
-                content = @Content(
-                    mediaType = "application/json",
-                    schema = @Schema(implementation = ProyectoGrado.class)
-                )
-            ),
-            @ApiResponse(
-                responseCode = "404",
-                description = "Proyecto no encontrado"
-            )
-        }
+            summary = "Obtener proyecto por ID",
+            description = "Recupera los detalles completos de un proyecto específico por su identificador."
     )
     @GetMapping("/{id}")
     public ResponseEntity<?> obtenerProyectoPorId(@PathVariable Long id) {
         try {
-            ProyectoGrado proyecto = facade.obtenerProyectosPorEstudiante(null)
-                    .stream()
-                    .filter(p -> p.getId().equals(id))
-                    .findFirst()
-                    .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
-            
+            ProyectoGrado proyecto = facade.obtenerProyectoPorId(id); // <- fix
             return ResponseEntity.ok(proyecto);
         } catch (Exception e) {
             return ResponseEntity.status(404)
                     .body(java.util.Map.of("error", e.getMessage()));
         }
+    }
+
+    @Operation(
+            summary = "Obtener estado del proyecto",
+            description = "Devuelve estado actual, intentos y últimas observaciones."
+    )
+    @GetMapping(path = "/{id}/estado", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> estado(@PathVariable Long id){
+        ProyectoGrado p = facade.obtenerProyectoPorId(id);
+        java.util.Map<String,Object> dto = new java.util.HashMap<>();
+        dto.put("proyectoId", p.getId());
+        dto.put("estado", p.getEstadoActual());
+        dto.put("intentos", p.getIntentos());
+        dto.put("observaciones", p.getObservacionesEvaluacion());
+        dto.put("titulo", p.getTitulo());
+        dto.put("modalidad", p.getModalidad());
+        return ResponseEntity.ok(dto);
     }
 }
