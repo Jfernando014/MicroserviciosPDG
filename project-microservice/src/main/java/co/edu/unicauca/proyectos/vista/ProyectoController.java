@@ -3,6 +3,8 @@ package co.edu.unicauca.proyectos.vista;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.MediaType;
+import org.springframework.web.multipart.MultipartFile;
 
 import co.edu.unicauca.proyectos.models.ProyectoGrado;
 import co.edu.unicauca.proyectos.dto.ProyectoRequest;
@@ -129,6 +131,24 @@ public class ProyectoController {
             return ResponseEntity.status(500).body("{\"error\": \"Error interno\"}");
         }
     }
+
+    @Operation(
+            summary = "Subir Formato A",
+            description = "Recibe el PDF del Formato A y la carta (obligatoria si la modalidad es PRACTICA_PROFESIONAL)."
+    )
+    @PostMapping(value="/formatoA", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> subirFormatoA(
+            @RequestParam String titulo,
+            @RequestParam String modalidad, // INVESTIGACION | PRACTICA_PROFESIONAL
+            @RequestParam String directorEmail,
+            @RequestParam(required = false) String codirectorEmail,
+            @RequestParam String estudiante1Email,
+            @RequestPart("pdf") MultipartFile pdf,
+            @RequestPart(value = "carta", required = false) MultipartFile carta
+    ){
+        return facade.subirFormatoA(titulo, modalidad, directorEmail, codirectorEmail, estudiante1Email, pdf, carta);
+    }
+
 
     @Operation(
         summary = "Evaluar un proyecto de grado",

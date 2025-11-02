@@ -24,6 +24,9 @@ public class ProyectoGrado {
     private String observacionesEvaluacion;
     private int numeroIntento = 1;
     private String estadoActual; // Persistente
+    private String formatoAToken;
+    private String cartaToken;
+
 
     @Transient
     private EstadoProyecto estado;

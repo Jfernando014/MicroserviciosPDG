@@ -1,3 +1,4 @@
+
 package co.edu.unicauca.documentos.vista;
 
 import co.edu.unicauca.documentos.models.Documento;
@@ -10,6 +11,7 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,20 +27,24 @@ public class DocumentoController {
     @Autowired
     private IDocumentoService documentoService;
 
-    @Operation(summary = "Subir un documento")
-    @PostMapping("/subir")
-    public ResponseEntity<Documento> subirDocumento(@RequestParam("idProyecto") Long idProyecto,
-                                                    @RequestParam("tipoDocumento") String tipoDocumento,
-                                                    @RequestParam("archivo") MultipartFile archivo) {
+    @Operation(summary = "Subir un documento (retorna String token para Feign)")
+    @PostMapping(value = "/subir", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<String> subirDocumento(
+            @RequestParam("idProyecto") Long idProyecto,
+            @RequestParam("tipoDocumento") String tipoDocumento,
+            @RequestPart("archivo") MultipartFile archivo) {
         try {
             DocumentoRequest request = new DocumentoRequest();
             request.setIdProyecto(idProyecto);
             request.setTipoDocumento(tipoDocumento);
             request.setArchivo(archivo);
+
             Documento documento = documentoService.subirDocumento(request);
-            return ResponseEntity.ok(documento);
+
+            // Retornar solo el ID como String (token)
+            return ResponseEntity.ok(documento.getId().toString());
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
         }
     }
 
@@ -67,11 +73,7 @@ public class DocumentoController {
     @GetMapping("/plantilla/formato-a")
     public ResponseEntity<Resource> descargarPlantillaFormatoA() {
         try {
-            // Ruta del archivo en resources/static/
             Path path = Paths.get("src/main/resources/static/formatoA.doc");
-            // Si usas JAR, usa classpath:
-            // Resource resource = new ClassPathResource("static/formato_a_plantilla.doc");
-
             UrlResource resource = new UrlResource(path.toUri());
             if (resource.exists()) {
                 return ResponseEntity.ok()
