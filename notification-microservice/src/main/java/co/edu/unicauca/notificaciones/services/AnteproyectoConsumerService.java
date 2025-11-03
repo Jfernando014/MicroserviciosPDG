@@ -3,13 +3,15 @@ package co.edu.unicauca.notificaciones.services;
 import co.edu.unicauca.notificaciones.models.AnteproyectoNotificacion;
 import co.edu.unicauca.notificaciones.util.RabbitMQConfig;
 import co.edu.unicauca.notificaciones.repository.AnteproyectoNotificacionRepository;
+import co.edu.unicauca.notificaciones.dto.AnteproyectoSubidoEvent;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-@Service
+@Slf4j @Service
 public class AnteproyectoConsumerService {
 
     private static final Logger logger = LoggerFactory.getLogger(AnteproyectoConsumerService.class);
@@ -50,4 +52,12 @@ public class AnteproyectoConsumerService {
 
         logger.info(msg.toString());
     }
+
+    @RabbitListener(queues = "anteproyecto.subido.q")
+    public void onMessage(AnteproyectoSubidoEvent e){
+        log.info("Correo a {} | Anteproyecto subido | id={} titulo={} | est={} t1={} t2={}",
+                e.getJefeDepartamentoEmail(), e.getIdProyecto(), e.getTitulo(),
+                e.getEstudianteEmail(), e.getTutor1Email(), e.getTutor2Email());
+    }
+
 }
