@@ -1,8 +1,18 @@
 package co.edu.unicauca.proyectos.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
+/**
+ * Debe coincidir con lo que consume notification-microservice:
+ *
+ */
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class EvaluacionFormatoAEvent {
     private Long idProyecto;
     private String titulo;

@@ -10,32 +10,32 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class NotificacionesClient {
+public class NotificacionesPublisher {
 
     private final RabbitTemplate rabbitTemplate;
 
     @Value("${app.rabbitmq.exchange:notificaciones.exchange}")
     private String exchange;
 
-    // Fallbacks en cascada: primero keys nuevas, luego viejas, luego default literal
-    @Value("${app.rabbitmq.routing.formatoA.subido:${app.rabbitmq.routing.formatoA:${app.rabbitmq.routing.subido:formatoA.subido}}}")
+    // Usa 'routing.*' y define defaults
+    @Value("${app.rabbitmq.routing.formatoA.subido:formatoA.subido}")
     private String rkFormatoASubido;
 
-    @Value("${app.rabbitmq.routing.formatoA.evaluado:${app.rabbitmq.routing.evaluado:formatoA.evaluado}}")
+    @Value("${app.rabbitmq.routing.formatoA.evaluado:formatoA.evaluado}")
     private String rkFormatoAEvaluado;
 
     @Value("${app.rabbitmq.routing.anteproyecto.subido:anteproyecto.subido}")
     private String rkAnteproyectoSubido;
 
-    public void notificarFormatoASubido(FormatoASubidoEvent ev) {
+    public void publicarFormatoASubido(FormatoASubidoEvent ev) {
         rabbitTemplate.convertAndSend(exchange, rkFormatoASubido, ev);
     }
 
-    public void notificarEvaluacion(EvaluacionFormatoAEvent ev) {
+    public void publicarEvaluacionFormatoA(EvaluacionFormatoAEvent ev) {
         rabbitTemplate.convertAndSend(exchange, rkFormatoAEvaluado, ev);
     }
 
-    public void notificarAnteproyecto(AnteproyectoSubidoEvent ev) {
+    public void publicarAnteproyectoSubido(AnteproyectoSubidoEvent ev) {
         rabbitTemplate.convertAndSend(exchange, rkAnteproyectoSubido, ev);
     }
 }
