@@ -10,6 +10,7 @@ import co.edu.unicauca.proyectos.dto.AnteproyectoSubidoEvent;
 import co.edu.unicauca.proyectos.dto.EvaluacionFormatoAEvent;
 import co.edu.unicauca.proyectos.services.evaluacion.EvaluadorAprobacion;
 import co.edu.unicauca.proyectos.services.evaluacion.EvaluadorRechazo;
+import co.edu.unicauca.proyectos.models.estados.FormatoAAprobadoState;
 
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -169,18 +170,19 @@ public class ProyectoServiceFacade implements IProyectoServiceFacade {
     }
 
     @Override
+    @jakarta.transaction.Transactional
     public void evaluarProyecto(Long id, boolean aprobado, String observaciones) {
-        if (aprobado) evaluadorAprobacion.evaluarProyecto(id, true, observaciones);
-        else          evaluadorRechazo.evaluarProyecto(id, false, observaciones);
-
-        // cargar y persistir observación por si el strategy no lo hizo
         ProyectoGrado p = proyectoService.obtenerPorId(id);
         if (p == null) return;
-        p.setObservacionesEvaluacion(observaciones);
+
+        if (aprobado) {
+            evaluadorAprobacion.evaluarProyecto(p, true, observaciones);
+        } else {
+            evaluadorRechazo.evaluarProyecto(p, false, observaciones);
+        }
         proyectoService.guardar(p);
 
-        // evento a notificaciones
-        EvaluacionFormatoAEvent ev = new EvaluacionFormatoAEvent();
+        var ev = new EvaluacionFormatoAEvent();
         ev.setIdProyecto(p.getId());
         ev.setTitulo(p.getTitulo());
         ev.setAprobado(aprobado);
@@ -214,10 +216,10 @@ public class ProyectoServiceFacade implements IProyectoServiceFacade {
             ProyectoGrado p = proyectoService.obtenerPorId(idProyecto);
             if (p == null) return ResponseEntity.status(404).body(Map.of("error", "Proyecto no encontrado"));
 
-            if (!"FORMATO_A_APROBADO".equals(p.getEstadoActual())) {
+            if (!(p.getEstado() instanceof FormatoAAprobadoState)) {
                 return ResponseEntity.badRequest().body(Map.of(
                         "error", "Solo se puede subir anteproyecto si el Formato A está aprobado.",
-                        "estadoActual", p.getEstadoActual()
+                        "estadoActual", p.getEstado().getClass().getSimpleName()
                 ));
             }
 
