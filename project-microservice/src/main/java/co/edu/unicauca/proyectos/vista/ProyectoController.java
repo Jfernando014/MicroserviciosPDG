@@ -96,22 +96,22 @@ public class ProyectoController {
             description = "Cambia el estado de un proyecto de grado a aprobado o rechazado y envía una notificación a los implicados."
     )
     @PostMapping("/{id}/evaluar")
-    public ResponseEntity<?> evaluarProyecto(
-            @PathVariable Long id,
-            @RequestParam boolean aprobado,
-            @RequestParam String observaciones,
-            @RequestHeader(name = "X-Role", required = true) String role // <- control mínimo de actor
-    ) {
-        try {
-            if (!"COORDINADOR".equalsIgnoreCase(role)) {
-                return ResponseEntity.status(403).body(java.util.Map.of("error", "Solo COORDINADOR puede evaluar"));
-            }
-            facade.evaluarProyecto(id, aprobado, observaciones);
-            return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            return ResponseEntity.status(404).body("{\"error\": \"" + e.getMessage() + "\"}");
-        }
+    public ResponseEntity<?> evaluarProyecto(@PathVariable Long id,
+                                             @RequestParam boolean aprobado,
+                                             @RequestParam String observaciones) {
+        facade.evaluarProyecto(id, aprobado, observaciones);
+        var p = facade.obtenerProyectoPorId(id);
+        var resp = new java.util.HashMap<String,Object>();
+        resp.put("mensaje", "Proyecto evaluado");
+        resp.put("id", p.getId());
+        resp.put("estadoActual", p.getEstadoActual());
+        resp.put("numeroIntento", p.getNumeroIntento());
+        resp.put("aprobado", aprobado);
+        resp.put("observaciones", observaciones);
+        return ResponseEntity.ok(resp);
     }
+
+
 
     @Operation(
             summary = "Subir anteproyecto",

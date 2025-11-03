@@ -7,6 +7,7 @@ import co.edu.unicauca.proyectos.models.ProyectoGrado;
 import co.edu.unicauca.proyectos.models.estados.EnPrimeraEvaluacionState;
 import co.edu.unicauca.proyectos.dto.FormatoASubidoEvent;
 import co.edu.unicauca.proyectos.dto.AnteproyectoSubidoEvent;
+import co.edu.unicauca.proyectos.dto.EvaluacionFormatoAEvent;
 import co.edu.unicauca.proyectos.services.evaluacion.EvaluadorAprobacion;
 import co.edu.unicauca.proyectos.services.evaluacion.EvaluadorRechazo;
 
@@ -27,6 +28,7 @@ public class ProyectoServiceFacade implements IProyectoServiceFacade {
     private static final String EXCHANGE = "notificaciones.exchange";
     private static final String RK_FORMATO_A_SUBIDO = "formatoA.subido";
     private static final String RK_ANTEPROYECTO_SUBIDO = "anteproyecto.subido";
+    private static final String RK_FORMATO_A_EVALUADO = "formatoA.evaluado";
 
     // Dependencias
     private final ProyectoRepository proyectoRepository;
@@ -129,7 +131,27 @@ public class ProyectoServiceFacade implements IProyectoServiceFacade {
     @Override
     public void evaluarProyecto(Long id, boolean aprobado, String observaciones) {
         if (aprobado) evaluadorAprobacion.evaluarProyecto(id, true, observaciones);
-        else evaluadorRechazo.evaluarProyecto(id, false, observaciones);
+        else          evaluadorRechazo.evaluarProyecto(id, false, observaciones);
+
+        // cargar y persistir observación por si el strategy no lo hizo
+        ProyectoGrado p = proyectoService.obtenerPorId(id);
+        if (p == null) return;
+        p.setObservacionesEvaluacion(observaciones);
+        proyectoService.guardar(p);
+
+        // evento a notificaciones
+        EvaluacionFormatoAEvent ev = new EvaluacionFormatoAEvent();
+        ev.setIdProyecto(p.getId());
+        ev.setTitulo(p.getTitulo());
+        ev.setAprobado(aprobado);
+        ev.setObservaciones(observaciones);
+        ev.setEstudianteEmail1(p.getEstudiante1Email());
+        ev.setEstudianteEmail2(p.getEstudiante2Email());
+        ev.setDirectorEmail(p.getDirectorEmail());
+        ev.setCodirectorEmail(p.getCodirectorEmail());
+        ev.setCoordinadorEmail("coordinador.sistemas@unicauca.edu.co");
+
+        rabbitTemplate.convertAndSend(EXCHANGE, RK_FORMATO_A_EVALUADO, ev);
     }
 
     @Override
@@ -217,10 +239,25 @@ public class ProyectoServiceFacade implements IProyectoServiceFacade {
     // Soporte directo a evaluaciones de estado interno
     @Transactional
     public ProyectoGrado evaluarFormatoA(Long idProyecto, boolean aprobado, String observaciones){
-        var p = proyectoRepository.findById(idProyecto)
+        ProyectoGrado p = proyectoRepository.findById(idProyecto)
                 .orElseThrow(() -> new IllegalArgumentException("Proyecto no encontrado"));
         p.evaluar(aprobado, observaciones);
-        return proyectoRepository.save(p);
+        p.setObservacionesEvaluacion(observaciones);
+        p = proyectoRepository.save(p);
+
+        EvaluacionFormatoAEvent ev = new EvaluacionFormatoAEvent();
+        ev.setIdProyecto(p.getId());
+        ev.setTitulo(p.getTitulo());
+        ev.setAprobado(aprobado);
+        ev.setObservaciones(observaciones);
+        ev.setEstudianteEmail1(p.getEstudiante1Email());
+        ev.setEstudianteEmail2(p.getEstudiante2Email());
+        ev.setDirectorEmail(p.getDirectorEmail());
+        ev.setCodirectorEmail(p.getCodirectorEmail());
+        ev.setCoordinadorEmail("coordinador.sistemas@unicauca.edu.co");
+        rabbitTemplate.convertAndSend(EXCHANGE, RK_FORMATO_A_EVALUADO, ev);
+
+        return p;
     }
 
     public ProyectoGrado buscarProyecto(Long id){
