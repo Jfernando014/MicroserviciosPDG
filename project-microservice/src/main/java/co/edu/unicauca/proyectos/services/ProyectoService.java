@@ -3,13 +3,17 @@ package co.edu.unicauca.proyectos.services;
 import co.edu.unicauca.proyectos.models.ProyectoGrado;
 import co.edu.unicauca.proyectos.repository.ProyectoRepository;
 import co.edu.unicauca.proyectos.util.ProyectoNoEncontradoException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class ProyectoService implements IProyectoService {
+
+    private final ProyectoRepository repo;
 
     @Autowired
     private ProyectoRepository proyectoRepository;
@@ -43,5 +47,10 @@ public class ProyectoService implements IProyectoService {
     @Override
     public ProyectoGrado guardar(ProyectoGrado proyecto) {
         return proyectoRepository.save(proyecto);
+    }
+
+    @Override
+    public List<ProyectoGrado> findByAnteproyectoTokenIsNotNull() {
+        return repo.findByAnteproyectoTokenIsNotNull();
     }
 }

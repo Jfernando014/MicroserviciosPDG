@@ -264,7 +264,8 @@ public class ProyectoServiceFacade implements IProyectoServiceFacade {
 
     @Override
     public List<ProyectoGrado> obtenerAnteproyectosPorJefe(String emailJefe) {
-        return proyectoService.obtenerTodos(); // filtra luego si agregas campo responsable
+        validarUsuario(emailJefe, "JEFE_DEPARTAMENTO");
+        return proyectoService.findByAnteproyectoTokenIsNotNull();
     }
 
     @Override
