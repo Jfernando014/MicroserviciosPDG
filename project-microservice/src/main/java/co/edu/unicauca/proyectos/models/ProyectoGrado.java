@@ -1,5 +1,6 @@
 package co.edu.unicauca.proyectos.models;
 
+import java.time.LocalDate;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -41,6 +42,12 @@ public class ProyectoGrado {
 
     @Column(length = 2000)
     private String observacionesEvaluacion;
+
+    @Column(columnDefinition = "date")
+    private LocalDate fechaFormatoA;
+
+    @Column(columnDefinition = "date")
+    private LocalDate fechaAnteproyecto;
 
     private String formatoAToken;
     private String cartaToken;

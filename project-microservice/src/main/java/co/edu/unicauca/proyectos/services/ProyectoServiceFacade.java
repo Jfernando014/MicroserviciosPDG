@@ -82,6 +82,7 @@ public class ProyectoServiceFacade implements IProyectoServiceFacade {
         p.setEstudiante1Email(estudiante1Email);
         p.setFormatoAToken(formatoTok);
         p.setCartaToken(cartaTok);
+        p.setFechaFormatoA(java.time.LocalDate.now());
 
         p = proyectoRepository.save(p);
 
@@ -237,6 +238,7 @@ public class ProyectoServiceFacade implements IProyectoServiceFacade {
             ev.setJefeDepartamentoEmail(jefeDepartamentoEmail);
             ev.setEstudianteEmail(p.getEstudiante1Email());
             ev.setTutor1Email(p.getDirectorEmail());
+            p.setFechaAnteproyecto(java.time.LocalDate.now());
             if (p.getCodirectorEmail() != null && !p.getCodirectorEmail().isEmpty()) {
                 ev.setTutor2Email(p.getCodirectorEmail());
             }
