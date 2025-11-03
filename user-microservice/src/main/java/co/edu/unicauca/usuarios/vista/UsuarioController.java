@@ -8,7 +8,6 @@ import co.edu.unicauca.usuarios.models.*;
 import co.edu.unicauca.usuarios.services.IUsuarioService;
 import co.edu.unicauca.usuarios.util.InvalidUserDataException;
 import co.edu.unicauca.usuarios.util.UserAlreadyExistsException;
-import lombok.var;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
