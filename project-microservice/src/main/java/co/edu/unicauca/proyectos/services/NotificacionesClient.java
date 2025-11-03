@@ -1,41 +1,37 @@
 package co.edu.unicauca.proyectos.services;
 
-import co.edu.unicauca.proyectos.dto.*;
+import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
-@Service
-public class NotificacionesClient implements INotificacionesClient {
+@Component
+@RequiredArgsConstructor
+public class NotificacionesClient {
 
-    @Autowired
-    private RabbitTemplate rabbitTemplate;
+    private final RabbitTemplate rabbitTemplate;
 
     @Value("${app.rabbitmq.exchange}")
     private String exchange;
 
-    @Value("${app.rabbitmq.routingkey.formato_a_subido}")
-    private String routingKeyFormatoA;
+    @Value("${app.rabbitmq.routing.formatoA}")
+    private String rkFormatoA;
 
-    @Value("${app.rabbitmq.routingkey.evaluado}")
-    private String routingKeyEvaluado;
+    @Value("${app.rabbitmq.routing.evaluado}")
+    private String rkEvaluado;
 
-    @Value("${app.rabbitmq.routingkey.anteproyecto}")
-    private String routingKeyAnteproyecto;
+    @Value("${app.rabbitmq.routing.anteproyecto}")
+    private String rkAnteproyecto;
 
-    @Override
-    public void notificarFormatoASubido(FormatoASubidoEvent event) {
-        rabbitTemplate.convertAndSend(exchange, routingKeyFormatoA, event);
+    public void publicarFormatoASubido(Object evento) {
+        rabbitTemplate.convertAndSend(exchange, rkFormatoA, evento);
     }
 
-    @Override
-    public void notificarEvaluacion(ProyectoEvaluadoEvent event) {
-        rabbitTemplate.convertAndSend(exchange, routingKeyEvaluado, event);
+    public void publicarFormatoAEvaluado(Object evento) {
+        rabbitTemplate.convertAndSend(exchange, rkEvaluado, evento);
     }
 
-    @Override
-    public void notificarAnteproyectoSubido(AnteproyectoSubidoEvent event) {
-        rabbitTemplate.convertAndSend(exchange, routingKeyAnteproyecto, event);
+    public void publicarAnteproyectoSubido(Object evento) {
+        rabbitTemplate.convertAndSend(exchange, rkAnteproyecto, evento);
     }
 }
