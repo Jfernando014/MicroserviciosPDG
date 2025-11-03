@@ -111,8 +111,6 @@ public class ProyectoController {
         return ResponseEntity.ok(resp);
     }
 
-
-
     @Operation(
             summary = "Subir anteproyecto",
             description = "Permite al docente subir el archivo PDF del anteproyecto una vez el Formato A ha sido aprobado. " +
@@ -201,4 +199,15 @@ public class ProyectoController {
         dto.put("modalidad", p.getModalidad());
         return ResponseEntity.ok(dto);
     }
+
+    @PostMapping("/{idProyecto}/evaluadores")
+    public ResponseEntity<?> asignarEvaluadores(
+            @PathVariable Long idProyecto,
+            @RequestParam String jefeDepartamentoEmail,
+            @RequestParam String evaluador1Email,
+            @RequestParam String evaluador2Email) {
+        return facade.asignarEvaluadores(idProyecto, jefeDepartamentoEmail, evaluador1Email, evaluador2Email);
+    }
+
+
 }

@@ -21,6 +21,9 @@ public class ProyectoGrado {
     private String estudiante1Email;
     private String estudiante2Email;
 
+    private String evaluador1Email;
+    private String evaluador2Email;
+
     @Column(length = 2000)
     private String objetivoGeneral;
 

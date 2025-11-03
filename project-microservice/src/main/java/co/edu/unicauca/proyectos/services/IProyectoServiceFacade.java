@@ -1,9 +1,9 @@
 package co.edu.unicauca.proyectos.services;
 
 import co.edu.unicauca.proyectos.models.ProyectoGrado;
-import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
+import java.util.List;
 
 public interface IProyectoServiceFacade {
     
@@ -34,5 +34,10 @@ public interface IProyectoServiceFacade {
     ProyectoGrado obtenerProyectoPorId(Long id);
 
     List<ProyectoGrado> obtenerTodosProyectos();
+
+    ResponseEntity<?> asignarEvaluadores(Long idProyecto,
+                                         String jefeDepartamentoEmail,
+                                         String evaluador1Email,
+                                         String evaluador2Email);
 }
 

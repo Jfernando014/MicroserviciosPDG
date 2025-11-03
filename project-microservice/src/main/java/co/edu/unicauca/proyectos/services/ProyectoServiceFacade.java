@@ -29,6 +29,7 @@ public class ProyectoServiceFacade implements IProyectoServiceFacade {
     private static final String RK_FORMATO_A_SUBIDO = "formatoA.subido";
     private static final String RK_ANTEPROYECTO_SUBIDO = "anteproyecto.subido";
     private static final String RK_FORMATO_A_EVALUADO = "formatoA.evaluado";
+    private static final String RK_EVALUADORES_ASIGNADOS = "evaluadores.asignados";
 
     // Dependencias
     private final ProyectoRepository proyectoRepository;
@@ -105,6 +106,44 @@ public class ProyectoServiceFacade implements IProyectoServiceFacade {
         if (!Boolean.TRUE.equals(existe)) throw new RuntimeException("El usuario " + email + " no existe.");
         if (!rolEsperado.equals(rol)) throw new RuntimeException("El usuario " + email + " no es " + rolEsperado + ".");
     }
+
+    public ResponseEntity<?> asignarEvaluadores(
+            Long idProyecto,
+            String jefeDepartamentoEmail,
+            String evaluador1Email,
+            String evaluador2Email) {
+
+        var p = proyectoService.obtenerPorId(idProyecto);
+        if (p == null) return ResponseEntity.status(404).body(Map.of("error","Proyecto no encontrado"));
+
+        validarUsuario(jefeDepartamentoEmail, "JEFE_DEPARTAMENTO");
+        validarUsuario(evaluador1Email, "DOCENTE");
+        validarUsuario(evaluador2Email, "DOCENTE");
+
+        p.setEvaluador1Email(evaluador1Email);
+        p.setEvaluador2Email(evaluador2Email);
+        proyectoService.guardar(p);
+
+        var ev = new co.edu.unicauca.proyectos.dto.AsignacionEvaluadoresEvent();
+        ev.setIdProyecto(p.getId());
+        ev.setTitulo(p.getTitulo());
+        ev.setJefeDepartamentoEmail(jefeDepartamentoEmail);
+        ev.setEvaluador1Email(evaluador1Email);
+        ev.setEvaluador2Email(evaluador2Email);
+        ev.setEstudianteEmail1(p.getEstudiante1Email());
+        ev.setEstudianteEmail2(p.getEstudiante2Email());
+        ev.setDirectorEmail(p.getDirectorEmail());
+        ev.setCodirectorEmail(p.getCodirectorEmail());
+
+        rabbitTemplate.convertAndSend(EXCHANGE, RK_EVALUADORES_ASIGNADOS, ev);
+
+        return ResponseEntity.ok(Map.of(
+                "idProyecto", p.getId(),
+                "evaluador1", evaluador1Email,
+                "evaluador2", evaluador2Email
+        ));
+    }
+
 
     @Override
     public ProyectoGrado crearProyecto(ProyectoGrado proyecto) {
