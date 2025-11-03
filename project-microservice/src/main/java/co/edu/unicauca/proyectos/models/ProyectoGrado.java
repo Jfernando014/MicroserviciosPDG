@@ -5,40 +5,59 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import co.edu.unicauca.proyectos.models.estados.*;
 
-@Entity @Table(name="proyectos")
-@Data @NoArgsConstructor
+@Entity
+@Table(name = "proyectos")
+@Data
+@NoArgsConstructor
 public class ProyectoGrado {
-    @Id @GeneratedValue(strategy=GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String titulo;
-    private String modalidad; // INVESTIGACION | PRACTICA_PROFESIONAL
+    private String modalidad;                  // INVESTIGACION | PRACTICA_PROFESIONAL
     private String directorEmail;
     private String codirectorEmail;
     private String estudiante1Email;
     private String estudiante2Email;
-    @Column(length=2000)
+
+    @Column(length = 2000)
     private String objetivoGeneral;
-    @Column(length=4000)
+
+    @Column(length = 4000)
     private String objetivosEspecificos;
 
-    private Integer intentos = 0;                     // 0..3
+    // Persistente: alinea con columna existente en BD
+    @Column(name = "NUMERO_INTENTO", nullable = false)
+    private Integer numeroIntento;             // 0..3
+
     private String estadoActual = "EN_PRIMERA_EVALUACION_FORMATO_A";
+
     @Transient
     private EstadoProyecto estado = new EnPrimeraEvaluacionState();
 
-    @Column(length=2000)
+    @Column(length = 2000)
     private String observacionesEvaluacion;
 
     private String formatoAToken;
     private String cartaToken;
     private String anteproyectoToken;
 
-    // setters sincronizan nombre de estado visible
+    // Defaults para columnas NOT NULL
+    @PrePersist
+    void prePersist() {
+        if (numeroIntento == null) numeroIntento = 0;
+        if (estadoActual == null || estadoActual.isBlank())
+            estadoActual = "EN_PRIMERA_EVALUACION_FORMATO_A";
+        if (estado == null) estado = fromNombre(estadoActual);
+    }
+
+    // Estados
     public void setEstado(EstadoProyecto nuevo) {
         this.estado = nuevo;
         this.estadoActual = nuevo.getNombreEstado();
     }
+
     public String getEstadoActual() { return estadoActual; }
 
     public void evaluar(boolean aprobado, String observaciones) {
@@ -51,7 +70,6 @@ public class ProyectoGrado {
         this.estado.reintentar(this);
     }
 
-    // fábrica simple por nombre persistido
     private EstadoProyecto fromNombre(String nombre) {
         return switch (nombre) {
             case "EN_PRIMERA_EVALUACION_FORMATO_A" -> new EnPrimeraEvaluacionState();
@@ -63,23 +81,21 @@ public class ProyectoGrado {
         };
     }
 
-    // helpers usados por estados
+    // Helpers usados por los estados
     public void incrementarIntentoORechazarDefinitivo() {
-        this.intentos = this.intentos == null ? 0 : this.intentos;
-        if (this.intentos >= 2) {        // al 3er rechazo
+        if (numeroIntento == null) numeroIntento = 0;
+        if (numeroIntento >= 2) {
             setEstado(new RechazadoDefinitivoState());
         } else {
-            this.intentos += 1;
+            numeroIntento += 1;
         }
     }
 
-    // ProyectoGrado.java  (añade adaptadores)
-    public Integer getNumeroIntento(){
-        return this.intentos;
-    }
+    // Adaptadores de compatibilidad
+    public Integer getNumeroIntento() { return this.numeroIntento; }
+    public void setNumeroIntento(int n) { this.numeroIntento = n; }
 
-    public void setNumeroIntento(int n){
-        this.intentos = n;
-    }
-
+    // Si en algún código se usa get/setIntentos, mantén estos proxies:
+    public Integer getIntentos() { return this.numeroIntento; }
+    public void setIntentos(Integer n) { this.numeroIntento = n; }
 }
