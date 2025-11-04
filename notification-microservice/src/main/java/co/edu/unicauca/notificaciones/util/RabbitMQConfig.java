@@ -7,6 +7,9 @@ import org.springframework.amqp.rabbit.annotation.EnableRabbit;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 
 @Configuration
 @EnableRabbit
@@ -78,4 +81,17 @@ public class RabbitMQConfig {
         admin.setAutoStartup(true);
         return admin;
     }
+
+    @Bean
+    public MessageConverter messageConverter() { return new Jackson2JsonMessageConverter(); }
+
+    @Bean
+    public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
+            ConnectionFactory cf, MessageConverter mc) {
+        SimpleRabbitListenerContainerFactory f = new SimpleRabbitListenerContainerFactory();
+        f.setConnectionFactory(cf);
+        f.setMessageConverter(mc);
+        return f;
+    }
+
 }

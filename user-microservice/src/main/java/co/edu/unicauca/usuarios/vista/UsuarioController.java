@@ -94,14 +94,14 @@ public class UsuarioController {
     // ------- Validación cruzada para otros MS -------
 
     @GetMapping("/validar")
-    public ResponseEntity<?> validar(@RequestParam String email){
+    public ResponseEntity<?> validar(@RequestParam("email") String email){
         boolean existe = usuarioService.existeUsuario(email);
         String rol = usuarioService.obtenerRol(email);
         return ResponseEntity.ok(Map.of("existe", existe, "rol", existe ? rol : null));
     }
 
     @GetMapping("/{email}")
-    public ResponseEntity<?> obtenerUsuario(@PathVariable String email) {
+    public ResponseEntity<?> obtenerUsuario(@PathVariable("email") String email) {
         try {
             var usuario = usuarioService.obtenerPorEmail(email);
             return ResponseEntity.ok(usuario);

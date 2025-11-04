@@ -78,16 +78,16 @@ public class ProyectoController {
             summary = "Subir Formato A",
             description = "Recibe el PDF del Formato A y la carta (obligatoria si la modalidad es PRACTICA_PROFESIONAL)."
     )
-    @PostMapping(value = "/formatoA", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value="/formatoA", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> subirFormatoA(
-            @RequestParam String titulo,
-            @RequestParam String modalidad, // INVESTIGACION | PRACTICA_PROFESIONAL
-            @RequestParam String directorEmail,
-            @RequestParam(required = false) String codirectorEmail,
-            @RequestParam String estudiante1Email,
+            @RequestParam("titulo") String titulo,
+            @RequestParam("modalidad") String modalidad,
+            @RequestParam("directorEmail") String directorEmail,
+            @RequestParam(value="codirectorEmail", required=false) String codirectorEmail,
+            @RequestParam("estudiante1Email") String estudiante1Email,
             @RequestPart("pdf") MultipartFile pdf,
-            @RequestPart(value = "carta", required = false) MultipartFile carta
-    ) {
+            @RequestPart(value="carta", required=false) MultipartFile carta)
+    {
         return facade.subirFormatoA(titulo, modalidad, directorEmail, codirectorEmail, estudiante1Email, pdf, carta);
     }
 
@@ -96,9 +96,9 @@ public class ProyectoController {
             description = "Cambia el estado de un proyecto de grado a aprobado o rechazado y envía una notificación a los implicados."
     )
     @PostMapping("/{id}/evaluar")
-    public ResponseEntity<?> evaluarProyecto(@PathVariable Long id,
-                                             @RequestParam boolean aprobado,
-                                             @RequestParam String observaciones) {
+    public ResponseEntity<?> evaluarProyecto(@PathVariable("id") Long id,
+                                             @RequestParam("aprobado") boolean aprobado,
+                                             @RequestParam("observaciones") String observaciones) {
         facade.evaluarProyecto(id, aprobado, observaciones);
         var p = facade.obtenerProyectoPorId(id);
         var resp = new java.util.HashMap<String,Object>();
@@ -116,12 +116,11 @@ public class ProyectoController {
             description = "Permite al docente subir el archivo PDF del anteproyecto una vez el Formato A ha sido aprobado. " +
                     "Envía notificación al jefe de departamento para asignar evaluadores."
     )
-    @PostMapping(value = "/{idProyecto}/anteproyecto", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value="/{idProyecto}/anteproyecto", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> subirAnteproyecto(
-            @PathVariable Long idProyecto,
-            @RequestParam String jefeDepartamentoEmail,
-            @RequestPart("pdf") MultipartFile anteproyectoPdf
-    ) {
+            @PathVariable("idProyecto") Long idProyecto,
+            @RequestParam("jefeDepartamentoEmail") String jefeDepartamentoEmail,
+            @RequestPart("pdf") MultipartFile anteproyectoPdf)  {
         return facade.subirAnteproyecto(idProyecto, jefeDepartamentoEmail, anteproyectoPdf); // <- delega al façade
     }
 
@@ -144,7 +143,7 @@ public class ProyectoController {
             description = "Recupera todos los proyectos que tienen anteproyecto subido y están pendientes de asignación de evaluadores."
     )
     @GetMapping("/anteproyectos/jefe/{emailJefe}")
-    public ResponseEntity<?> obtenerAnteproyectosPorJefe(@PathVariable String emailJefe) {
+    public ResponseEntity<?> obtenerAnteproyectosPorJefe(@PathVariable("emailJefe") String emailJefe) {
         try {
             List<ProyectoGrado> proyectos = facade.obtenerAnteproyectosPorJefe(emailJefe);
             return ResponseEntity.ok(proyectos);
@@ -202,10 +201,10 @@ public class ProyectoController {
 
     @PostMapping("/{idProyecto}/evaluadores")
     public ResponseEntity<?> asignarEvaluadores(
-            @PathVariable Long idProyecto,
-            @RequestParam String jefeDepartamentoEmail,
-            @RequestParam String evaluador1Email,
-            @RequestParam String evaluador2Email) {
+            @PathVariable("idProyecto") Long idProyecto,
+            @RequestParam("jefeDepartamentoEmail") String jefeDepartamentoEmail,
+            @RequestParam("evaluador1Email") String evaluador1Email,
+            @RequestParam("evaluador2Email") String evaluador2Email) {
         return facade.asignarEvaluadores(idProyecto, jefeDepartamentoEmail, evaluador1Email, evaluador2Email);
     }
 
