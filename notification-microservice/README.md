@@ -29,3 +29,5 @@ Microservicio encargado de la gestión de notificaciones generadas por eventos d
 - GET /api/notificaciones/usuario/{email} — Listar notificaciones de un usuario
 
 - DELETE /api/notificaciones/{id} — Eliminar notificación
+## Puerto
+- `8083`
