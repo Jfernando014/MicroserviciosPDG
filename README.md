@@ -143,9 +143,7 @@ notification-microservice
 
 ## 🎯 Escenario de calidad: escalabilidad (resumen)
 
-* Pico: **50 req/s** a `POST /proyectos/formato-a` por 10 min.
-* Objetivos: **≤ 1.5 s** avg, **< 1%** errores, cola **< 10k**, drenaje **< 5 min**.
-* Estrategia: 2–3 instancias para `project` y `document`, EDA para desacoplar y absorber picos.
+Se simula hora pico con 100 subidas de Formato A casi simultáneas desde Postman Runner al project-microservice con notification inicialmente apagado; el servicio responde rápido confirmando la recepción y encola lo no crítico en RabbitMQ, la cola sube de forma controlada y, al encender notification-microservice, se drena hasta cero. Métricas: latencia promedio ≤ 1.5 s, ≥ 99% respuestas 200/201, profundidad de cola ~100 → 0 y drenaje ≤ 2 min. Resultado: el sistema absorbe el pico sin degradación visible y, si crece la demanda, se incorporan más instancias del servicio de proyectos sin cambios funcionales.
 
 ---
 
