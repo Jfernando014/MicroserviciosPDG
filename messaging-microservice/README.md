@@ -31,3 +31,5 @@ Microservicio encargado de la comunicación entre usuarios del sistema (mensajer
 - GET /api/mensajes/usuario/{email} — Mensajes de un usuario.
 
 - DELETE /api/mensajes/{id} — Eliminar mensaje.
+## Puerto
+- `8085`
