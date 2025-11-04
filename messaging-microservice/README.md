@@ -1,4 +1,4 @@
-# messaging-microservice
+# 💬 messaging-microservice
 
 Microservicio encargado de la comunicación entre usuarios del sistema (mensajería interna y notificaciones asociadas a los proyectos).
 
