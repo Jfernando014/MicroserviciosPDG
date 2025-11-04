@@ -1,4 +1,4 @@
-# notification-microservice
+# 🔔 notification-microservice
 
 Microservicio encargado de la gestión de notificaciones generadas por eventos del sistema de trabajos de grado.
 
